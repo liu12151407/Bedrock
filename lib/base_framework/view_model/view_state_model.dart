@@ -4,7 +4,10 @@ import 'dart:math';
 import 'package:connectivity/connectivity.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bedrock/base_framework/utils/exception_pitcher.dart';
 import 'package:flutter_bedrock/base_framework/view_model/interface/cache_data_factory.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/page_state.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/widget_state.dart';
 import 'package:oktoast/oktoast.dart';
 import 'package:flutter_bedrock/base_framework/exception/un_authorized_exception.dart';
 import 'package:flutter_bedrock/base_framework/exception/user_unbind_exception.dart';
@@ -12,7 +15,7 @@ import 'package:flutter_bedrock/base_framework/exception/user_unbind_exception.d
 import 'view_state.dart';
 
 
-class ViewStateModel with ChangeNotifier {
+abstract class ViewStateModel with ChangeNotifier {
 
   bool disposed = false;
 
@@ -125,11 +128,47 @@ class ViewStateModel with ChangeNotifier {
   }
 
   ///检查网络状态
-  checkNet()async{
+  Future<bool> checkNet()async{
     debugPrint('检查网络');
     var connectivityResult = await (Connectivity().checkConnectivity());
     return connectivityResult == ConnectivityResult.none;
   }
 
+
+}
+
+
+/// 虽然 * ViewModel 已经对 [loadData()]的业务异常进行捕捉，但由于其位置的特殊性，
+/// 使页面内其他的接口异常无法捕捉到，为此提供下面的功能。
+/// 页面或者widget[PageState],[WidgetState]需要对api所触发的业务异常进行监听时
+/// 可以为ViewModel混入此类
+
+mixin ExceptionBinding on ViewStateModel implements ExceptionListener{
+  ExceptionListener _listener;
+  ///混入此类后，实现[ExceptionListener]并调用此方法进行注册
+  bindToExceptionHandler(ExceptionListener listener){
+    if(listener == null) return;
+    _listener = listener;
+    addExceptionListener();
+  }
+
+  ///增加(业务)异常监听
+  addExceptionListener(){
+    ExceptionPitcher().addListener(_listener);
+  }
+  ///移除(业务)异常监听
+  /// * 默认会在dispose中自动移除
+  removeExceptionListener(){
+    if(_listener != null)
+      ExceptionPitcher().removeListener(_listener);
+  }
+
+
+  ///理论上，不需要你手动移除[ExceptionListener]，此处会自动处理
+  @override
+  void dispose() {
+    removeExceptionListener();
+    super.dispose();
+  }
 
 }

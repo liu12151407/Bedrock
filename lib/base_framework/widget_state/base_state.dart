@@ -3,88 +3,32 @@
 
 import 'package:flustars/flustars.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
+
+import 'package:flutter_bedrock/base_framework/factory/page/page_animation_builder.dart';
+import 'package:flutter_bedrock/base_framework/observe/route/router_binding.dart';
 import 'package:flutter_bedrock/base_framework/ui/behavior/over_scroll_behavior.dart';
+import 'package:flutter_bedrock/base_framework/ui/widget/progress_widget.dart';
+import 'package:flutter_bedrock/base_framework/ui/widget/route/route_aware_widget.dart';
 import 'package:flutter_bedrock/base_framework/utils/image_helper.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/base_stateless_widget.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/page_state.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/widget_state.dart';
+import 'package:oktoast/oktoast.dart';
+
+/// * 请勿直接继承此类
+/// * 如果是页面，继承 [PageState]
+/// * 如果是view，继承 [WidgetState]
+/// * 如果是stateless widget， 继承 [BaseStatelessWidget]
+///
+/// 此处扩展功能应该是 page和view通用功能
 
 
-
-abstract class BaseState<T extends StatefulWidget> extends State<T> with RouteAware {
-
-  double marginLeft = 0.0;
-  double dragPosition = 0.0;
-  bool slideOutActive = false;
-
-  ///所有页面请务必使用此方法作为根布局
-  ///切换状态栏 模式：light or dark
-  ///应在根位置调用此方法
-  ///needSlideOut是否支持右滑返回、如果整个项目不需要，可以配置默认值为false
-  Widget switchStatusBar2Dark({bool isSetDark = true,@required Widget child,
-    ///适配、
-    EdgeInsets edgeInsets,bool needSlideOut = false}){
-    if(! needSlideOut){
-      return AnnotatedRegion(
-          value: isSetDark ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
-          child: Material(
-            color: Colors.white,
-            child: Padding(
-              padding: edgeInsets??EdgeInsets.only(bottom: ScreenUtil.getInstance().bottomBarHeight),
-              child: child,
-            ),
-          )
-      );
-
-    }
-    return AnnotatedRegion(
-      value: isSetDark ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
-      child: Material(
-        color: Colors.transparent,
-        child: Padding(
-          padding: edgeInsets??EdgeInsets.only(bottom: ScreenUtil.getInstance().bottomBarHeight),
-          child: GestureDetector(
-            onHorizontalDragStart: (dragStart){
-              slideOutActive = dragStart.globalPosition.dx < (getScreenWidth() / 10);
-
-            },
-            onHorizontalDragUpdate: (dragDetails){
-              if(!slideOutActive) return;
-              marginLeft = dragDetails.globalPosition.dx;
-              dragPosition = marginLeft;
-              //if(marLeft > 250) return;
-              if(marginLeft < getWidthPx(50)) marginLeft = 0;
-              setState(() {
-
-              });
-            },
-            onHorizontalDragEnd: (dragEnd){
-              if(dragPosition > getScreenWidth()/5){
-                Navigator.of(context).pop();
-              }else{
-                marginLeft = 0.0;
-                setState(() {
-
-                });
-              }
-            },
-            child: AnimatedContainer(
-              duration: Duration(milliseconds: 200),
-              margin: EdgeInsets.only(left: marginLeft),
-              child: SingleChildScrollView(
-                physics: NeverScrollableScrollPhysics(),
-                scrollDirection: Axis.horizontal,
-                child: child,
-              ),
-            ),
-
-          ),
-        ),
-      )
-    );
-  }
+abstract class BaseState<T extends StatefulWidget> extends State<T>  {
 
 
   ///去掉 scroll view的 水印  e.g : listView scrollView
-  ///
+  ///当滑动到顶部或者底部时，继续拖动出现的蓝色水印
   Widget getNoInkWellListView({@required Widget scrollView}){
     return ScrollConfiguration(
       behavior: OverScrollBehavior(),
@@ -92,94 +36,6 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> with RouteAw
     );
   }
 
-
-  /// 一般页面的通用APP BAR 具体根据项目需求调整
-  Widget commonAppBar({Widget leftWidget,String title,List<Widget> rightWidget ,
-    Color bgColor = Colors.white,@required double leftPadding,@required double rightPadding}){
-    return Container(
-      width: getWidthPx(750),
-      height: getHeightPx(115),
-      //padding: EdgeInsets.only(left: getWidthPx(40),right: getWidthPx(40)),
-      color: bgColor??Color.fromRGBO(241, 241, 241, 1),
-      padding: EdgeInsets.only(bottom: getHeightPx(10),left: leftPadding,right: rightPadding),
-      alignment: Alignment.bottomCenter,
-      child: Stack(
-        alignment: Alignment.bottomRight,
-        children: <Widget>[
-          Positioned(
-            left: 0,
-            child: leftWidget ?? Container(),
-          ),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Visibility(
-              visible:  title != null,
-              child: Text(
-                "$title",
-                style: TextStyle(fontSize: getSp(36),color: Colors.black,
-                    decoration: TextDecoration.none),
-              ),
-            ),
-          ),
-          if(rightWidget != null)
-            ...rightWidget,
-        ],
-      ),
-    );
-  }
-
-  Widget buildAppBarLeft(){
-    return GestureDetector(
-      onTap: (){
-        Navigator.of(context).pop();
-      },
-      child: Container(
-        color: Colors.white,
-        width: getWidthPx(150),
-        height: getHeightPx(90),
-        alignment: Alignment.bottomLeft,
-        child: Image.asset(ImageHelper.wrapAssetsIcon("icon_back_black"),width: getWidthPx(17),height: getHeightPx(32),),
-      ),
-    );
-  }
-
-  Widget buildMsgWidget({bool showDot = false,Function hitMsgWidget}){
-    return GestureDetector(
-      onTap: (){
-        if(hitMsgWidget != null){
-          hitMsgWidget();
-        }
-      },
-      child: Container(
-        width: getWidthPx(38),
-        height: getHeightPx(34),
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-              bottom: 0,
-              child: Image.asset(ImageHelper.wrapAssetsIcon(showDot? "icon_msg_new.png":"icon_msg.png"),
-                width: getWidthPx(36),height:showDot ? getWidthPx(34):getWidthPx(28),),
-            ),
-            ///dot
-//            Positioned(
-//              right: 0,
-//              top: 0,
-//              child: Visibility(
-//                visible: showDot,
-//                child: ClipOval(
-//                  child: Container(
-//                    width: getWidthPx(14),
-//                    height: getWidthPx(14),
-//                    color: Color.fromRGBO(232, 97, 97, 1),
-//                  ),
-//                ),
-//              ),
-//            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   ///占位widget
   Widget getSizeBox({double width = 1,double height = 1}){
@@ -189,40 +45,49 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> with RouteAw
     );
   }
 
+  ///在页面上方显示一个 loading widget
+  ///共有两种方法，showProgressDialog是其中一种
+  ///具体参见 : progress_widget.dart
+  ///如果需要在 [dismissProgressDialog] 方法后跳转到其他页面或者执行什么
+  ///使用 参数 [afterDismiss]
+  DialogLoadingController _dialogLoadingController;
+  showProgressDialog({Widget progress,
+    Color bgColor,Function afterDismiss}){
+    if(_dialogLoadingController == null){
+      _dialogLoadingController = DialogLoadingController();
+      Navigator.of(context).push(PageRouteBuilder(
+        settings: RouteSettings(name: loadingLayerRouteName),
+          ///使用默认值效果可能不好
+          transitionDuration: const Duration(milliseconds: 0),
+          //reverseTransitionDuration: const Duration(milliseconds: 0),
+          opaque: false,
+          pageBuilder: (ctx,animation,secondAnimation){
+            return LoadingProgressState(controller: _dialogLoadingController
+              ,progress: progress,bgColor: bgColor,).generateWidget();
+          }
+      )).then((value){
+        _dialogLoadingController = null;
+        if(afterDismiss != null){
+          afterDismiss();
+        }
+
+      });
+    }
+  }
+
+  dismissProgressDialog(){
+    _dialogLoadingController?.dismissDialog();
+    //_dialogLoadingController = null;
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    _dialogLoadingController = null;
+    super.dispose();
+  }
 
 
-
-  /// current widget is visible and focusable if is true;
-  bool isResumed = true;
-
-  ///
-  bool isInactive = true;
-
-  ///cant not interact with user
-  bool isPause = false;
-
-
-  ///生命周期变化时回调
-//  resumed:应用可见并可响应用户操作
-//  inactive:用户可见，但不可响应用户操作
-//  paused:已经暂停了，用户不可见、不可操作
-//  suspending：应用被挂起，此状态IOS永远不会回调
-
-  /// just trigger at user is pressing home or back button;
-//  @override
-//  void didChangeAppLifecycleState(AppLifecycleState state) {
-//    isResumed = state == AppLifecycleState.resumed;
-//
-//    isInactive = state == AppLifecycleState.inactive;
-//    isPause = state == AppLifecycleState.paused;
-//
-//  }
-
-
-  ///使用common app bar时 应该实现下面的方法。
-  leftAppBarWidgetClick(){}
-
-  rightAppBarWidgetClick(){}
 
   /*
   * size adapter with tool ScreenUtil
@@ -250,36 +115,140 @@ abstract class BaseState<T extends StatefulWidget> extends State<T> with RouteAw
   ///得到适配后的字号
   double getSp(double fontSize) => ScreenUtil.getInstance().getSp(fontSize);
 
-  ///目前webview插件主要有两种，就当前版本介绍一下：
-  ///  1、webview_flutter ^0.3.21
-  ///     不支持html富文本、网页加载导致滚动异常 (如果遇到，使用wrapWebView() 方法可以解决)
-  ///  2、flutter_webview_plugin  ^0.3.11
-  ///     支持html富文本、但是会有web浮层导致遮盖其他原生页面（退出页面时即可发现）
+/*
+  * app 生命周期，建议在需要的地方自己注册监听
+  *
+  * */
 
+//
+//  /// current widget is visible and focusable if is true;
+//  bool isResumed = true;
+//
+//  ///
+//  bool isInactive = true;
+//
+//  ///cant not interact with user
+//  bool isPause = false;
 
-  ///解决 webview_flutter 滚动问题 update:解决不了
-//  Widget wrapWebView(Widget webView){
-//    return ListView(
-//      padding: EdgeInsets.all(0),
-//      children: <Widget>[
-//        SizedBox.fromSize(
-//          size: Size(100, 1000),
-//          child: webView,
-//        )
-//      ],
-//    );
+  ///生命周期变化时回调
+//  resumed:应用可见并可响应用户操作
+//  inactive:用户可见，但不可响应用户操作
+//  paused:已经暂停了，用户不可见、不可操作
+//  suspending：应用被挂起，此状态IOS永远不会回调
+
+  /// just trigger at user is pressing home or back button;
+//  @override
+//  void didChangeAppLifecycleState(AppLifecycleState state) {
+//    isResumed = state == AppLifecycleState.resumed;
+//
+//    isInactive = state == AppLifecycleState.inactive;
+//    isPause = state == AppLifecycleState.paused;
+//
 //  }
 
 
-  /*
-  * input
-  * 输入内容白名单
-  * */
-  WhitelistingTextInputFormatter getWhiteInputFormatter(RegExp regExp){
-    return WhitelistingTextInputFormatter(regExp);
+}
+
+///widget生成器
+///并且装配原flutter Widget的功能
+
+mixin WidgetGenerator on BaseState implements _RouteGenerator,_NavigateActor{
+
+  ///为state生成widget
+  Widget generateWidget({Key key}){
+    return _CommonWidget(state: this,key: key,);
   }
-  LengthLimitingTextInputFormatter getLengthInputFormatter(int length){
-    return LengthLimitingTextInputFormatter(length);
+
+  /// [routeName]  => 你的页面类名
+  @override
+  PageRoute<T> buildRoute<T>(Widget page, String routeName, {PageAnimation animation = PageAnimation.Non
+    , Object args}) {
+    assert(routeName != null && routeName.isNotEmpty,'route name must be not empty !');
+    final r = RouteSettings(
+        name:routeName,
+        arguments: args);
+
+    switch(animation){
+      case PageAnimation.Fade:
+        return pageBuilder.wrapWithFadeAnim(page,r);
+      case PageAnimation.Scale:
+        return pageBuilder.wrapWithScaleAnim(page,r);
+      case PageAnimation.Slide:
+        return pageBuilder.wrapWithSlideAnim(page,r);
+      default:
+        return pageBuilder.wrapWithNoAnim(page,r);
+    }
+  }
+
+  ///@param animation : 页面过度动画
+  ///@param animation : page transition's animation
+  ///see details in [PageAnimationBuilder]
+
+  @override
+  Future push<T extends PageState>(T targetPage,{PageAnimation animation}) {
+    assert(targetPage != null,'the target page must not null !');
+    return Navigator.of(context).push(buildRoute(targetPage.generateWidget(),
+        targetPage.runtimeType.toString(),animation: animation));
+  }
+
+  @override
+  Future pushReplacement<T extends Object, TO extends PageState>(TO targetPage, {PageAnimation animation, T result}) {
+    assert(targetPage != null,'the target page must not null !');
+    return Navigator.of(context).pushReplacement(buildRoute(targetPage.generateWidget(),
+        targetPage.runtimeType.toString(),animation: animation),result: result);
+  }
+
+  @override
+  Future pushAndRemoveUntil<T extends PageState>(T targetPage, {PageAnimation animation,@required RoutePredicate predicate}) {
+    assert(targetPage != null,'the target page must not null !');
+    return Navigator.of(context).pushAndRemoveUntil(buildRoute(targetPage.generateWidget(),
+        targetPage.runtimeType.toString(),animation: animation),predicate?? (route) => false);
+  }
+
+  @override
+  void pop<T extends Object>({T result}) {
+    Navigator.of(context).pop(result);
+  }
+  @override
+  void popUntil({@required RoutePredicate predicate}) {
+    Navigator.of(context).popUntil(predicate??(route) => false);
+  }
+
+  @override
+  bool canPop() {
+    return Navigator.of(context).canPop();
+  }
+
+}
+
+///构建 route
+
+abstract class _RouteGenerator {
+  PageRoute<T> buildRoute<T>(Widget page,String routeName,{PageAnimation animation,Object args});
+}
+
+
+///路由操作
+abstract class _NavigateActor{
+
+
+  Future push<T extends PageState>(T targetPage,{PageAnimation animation});
+  Future pushAndRemoveUntil<T extends PageState>(T targetPage,{PageAnimation animation,RoutePredicate predicate});
+  Future pushReplacement<T extends Object,TO extends PageState>(TO targetPage, {PageAnimation animation, T result });
+
+  void pop<T extends Object>({T result,});
+  void popUntil({RoutePredicate predicate});
+
+  bool canPop();
+}
+
+class _CommonWidget extends StatefulWidget{
+  final State state;
+
+  const _CommonWidget({Key key, this.state}) : super(key: key);
+  @override
+  State<StatefulWidget> createState() {
+    return state;
   }
 
 }

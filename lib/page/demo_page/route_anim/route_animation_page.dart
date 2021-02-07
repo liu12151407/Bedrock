@@ -3,17 +3,15 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bedrock/base_framework/config/router_manager.dart';
+import 'package:flutter_bedrock/base_framework/factory/page/page_animation_builder.dart';
 import 'package:flutter_bedrock/base_framework/widget_state/base_state.dart';
+import 'package:flutter_bedrock/base_framework/widget_state/page_state.dart';
+import 'package:flutter_bedrock/page/demo_page/route_anim/fade_page.dart';
+import 'package:flutter_bedrock/page/demo_page/route_anim/scale_page.dart';
+import 'package:flutter_bedrock/page/demo_page/route_anim/slide_page.dart';
 
-class RouteAnimationPage extends StatefulWidget{
-  @override
-  State<StatefulWidget> createState() {
-    return RouteAnimationPageState();
-  }
 
-}
-
-class RouteAnimationPageState extends BaseState<RouteAnimationPage> {
+class RouteAnimationPageState extends PageState {
   @override
   Widget build(BuildContext context) {
     return switchStatusBar2Dark(
@@ -23,7 +21,7 @@ class RouteAnimationPageState extends BaseState<RouteAnimationPage> {
             children: <Widget>[
               RaisedButton(
                 onPressed: (){
-                  Navigator.of(context).pushNamed(RouteName.slide_page);
+                  push(SlidePageState(),animation: PageAnimation.Slide);
 
                 },
                 child: Text("滑动跳转"),
@@ -31,7 +29,7 @@ class RouteAnimationPageState extends BaseState<RouteAnimationPage> {
               getSizeBox(height: getWidthPx(40)),
               RaisedButton(
                 onPressed: (){
-                  Navigator.of(context).pushNamed(RouteName.scale_page);
+                  push(ScalePageState(),animation: PageAnimation.Scale);
 
                 },
                 child: Text("缩放跳转"),
@@ -39,7 +37,7 @@ class RouteAnimationPageState extends BaseState<RouteAnimationPage> {
               getSizeBox(height: getWidthPx(40)),
               RaisedButton(
                 onPressed: (){
-                  Navigator.of(context).pushNamed(RouteName.fade_page);
+                  push(FadePageState(),animation: PageAnimation.Fade);
 
                 },
                 child: Text("渐隐跳转"),
